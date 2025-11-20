@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart' show Curves; // ← Curves 用
 import 'package:flutter/services.dart';
 
 void main() {
@@ -19,7 +20,7 @@ class DecisionRouletteApp extends StatelessWidget {
   }
 }
 
-/// モデル
+/// ===== モデル =====
 
 class RouletteOption {
   RouletteOption({
@@ -70,7 +71,7 @@ class Roulette {
   }
 }
 
-/// ホーム画面：ルーレット一覧
+/// ===== ホーム画面 =====
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -87,7 +88,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // サンプルデータ
     _roulettes.addAll([
       Roulette(
         id: _genId(),
@@ -131,7 +131,6 @@ class _HomePageState extends State<HomePage> {
     );
 
     if (updated != null) {
-      // lastUsed 更新など
       final index = _roulettes.indexWhere((r) => r.id == updated.id);
       if (index != -1) {
         setState(() {
@@ -147,7 +146,6 @@ class _HomePageState extends State<HomePage> {
     final existsIndex = _roulettes.indexWhere((r) => r.id == roulette.id);
 
     if (existsIndex != -1) {
-      // 既存のルーレットの更新として扱う
       setState(() {
         _roulettes[existsIndex] = roulette;
         _roulettes[existsIndex].lastUsed = DateTime.now();
@@ -155,7 +153,6 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    // 新規保存の場合：上限チェック
     if (_roulettes.length >= maxSaved) {
       final didDelete = await Navigator.of(context).push<bool>(
         CupertinoPageRoute(
@@ -173,7 +170,6 @@ class _HomePageState extends State<HomePage> {
       );
 
       if (didDelete != true) {
-        // 保存されませんがよろしいですか？ → はい or キャンセルで戻ってきた
         return;
       }
     }
@@ -279,8 +275,10 @@ class _HomePageState extends State<HomePage> {
                     )
                   : ListView.separated(
                       itemCount: items.length,
-                      separatorBuilder: (_, __) =>
-                          Container(height: 0.5, color: CupertinoColors.systemGrey4),
+                      separatorBuilder: (_, __) => Container(
+                        height: 0.5,
+                        color: CupertinoColors.systemGrey4,
+                      ),
                       itemBuilder: (context, index) {
                         final r = items[index];
                         return CupertinoButton(
@@ -370,6 +368,12 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
+/// ===== 編集画面 =====
+/// （ここから下は、あなたが貼ってくれた EditRoulettePage / SpinPage / CleanupPage をそのまま使ってOK）
+/// もしこのあともエラーが出る場合は、ログの「一番最初の赤いエラー行」
+/// （`lib/main.dart:◯:◯` の行）を見れば、どの行が原因かが分かる。
+///
+/// ひとまず今は main.dart の頭〜HomePage までだけ貼り替えてもらえれば十分。
 /// 編集画面：項目名 + 比率 + ゴミ箱 / 下に回す・保存
 
 class EditRoulettePage extends StatefulWidget {
