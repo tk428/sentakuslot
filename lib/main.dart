@@ -605,6 +605,8 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
 
 /// スロット画面
 
+/// スロット画面（Apple公式っぽいデザイン版）
+
 class SpinPage extends StatefulWidget {
   const SpinPage({
     super.key,
@@ -627,6 +629,9 @@ class _SpinPageState extends State<SpinPage> {
   bool _isSpinning = false;
   String? _selectedLabel;
   bool _showActions = false;
+
+  // 中央行を太字にするためのインデックス
+  int _currentIndex = 0;
 
   @override
   void initState() {
@@ -661,7 +666,7 @@ class _SpinPageState extends State<SpinPage> {
     final random = Random();
     final targetIndexInOptions = weights[random.nextInt(weights.length)];
 
-    // ListWheelScrollView のインデックスを大きめにしてグルグル回ってから止まる
+    // ある程度ぐるぐる回ってから止まるように大きいインデックスに飛ばす
     const int loopCount = 20;
     final base = _roulette.options.length * loopCount;
     final targetItem = base + targetIndexInOptions;
@@ -676,6 +681,7 @@ class _SpinPageState extends State<SpinPage> {
       _isSpinning = false;
       _selectedLabel = _roulette.options[targetIndexInOptions].label;
       _roulette.lastUsed = DateTime.now();
+      _currentIndex = targetIndexInOptions;
     });
 
     // 1秒後にボタン表示
@@ -684,81 +690,6 @@ class _SpinPageState extends State<SpinPage> {
     setState(() {
       _showActions = true;
     });
-  }
-
-  Widget _buildSlot() {
-    final options = _roulette.options;
-    if (options.isEmpty) {
-      return const Center(
-        child: Text('項目がありません'),
-      );
-    }
-
-    return ListWheelScrollView.useDelegate(
-      controller: _controller,
-      itemExtent: 44,
-      physics: _isSpinning
-          ? const NeverScrollableScrollPhysics()
-          : const FixedExtentScrollPhysics(),
-      overAndUnderCenterOpacity: 0.3, // 上下をぼやっと
-      perspective: 0.002,
-      diameterRatio: 1.6,
-      useMagnifier: true,
-      magnification: 1.15,
-      childDelegate: ListWheelChildBuilderDelegate(
-        builder: (context, index) {
-          final opt = options[index % options.length];
-          return Center(
-            child: Text(
-              opt.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 20,
-              ),
-            ),
-          );
-        },
-        childCount: options.length * 1000,
-      ),
-    );
-  }
-
-  Widget _buildResultOverlay() {
-    if (_selectedLabel == null) return const SizedBox.shrink();
-    return IgnorePointer(
-      ignoring: !_showActions,
-      child: Center(
-        child: AnimatedScale(
-          scale: _showActions ? 1.0 : 1.1,
-          duration: const Duration(milliseconds: 200),
-          child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: BoxDecoration(
-              color: CupertinoColors.systemBackground.withOpacity(0.9),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: const [
-                BoxShadow(
-                  blurRadius: 15,
-                  offset: Offset(0, 6),
-                  color: Color(0x33000000),
-                ),
-              ],
-            ),
-            child: Text(
-              _selectedLabel!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   Future<void> _handleSave() async {
@@ -779,108 +710,328 @@ class _SpinPageState extends State<SpinPage> {
     );
   }
 
+  // ===== UI 部分 =====
+
   @override
   Widget build(BuildContext context) {
+    final titleText = _roulette.title.isEmpty ? 'ルーレット' : _roulette.title;
+
     return CupertinoPageScaffold(
+      backgroundColor: CupertinoColors.systemGroupedBackground,
       navigationBar: CupertinoNavigationBar(
-        middle: Text(_roulette.title.isEmpty ? 'ルーレット' : _roulette.title),
+        middle: Text(titleText),
+        backgroundColor:
+            CupertinoColors.systemBackground.withOpacity(0.9),
+        border: null,
       ),
       child: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 16),
-            Text(
-              _roulette.title.isEmpty ? ' ' : _roulette.title,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _roulette.title.isEmpty ? ' ' : _roulette.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 12),
-            Expanded(
-              child: Stack(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 16),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        color: CupertinoColors.systemGrey6,
-                        child: _buildSlot(),
-                      ),
-                    ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'タップして回す',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: CupertinoColors.secondaryLabel,
                   ),
-                  _buildResultOverlay(),
-                ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // スロット筐体
+            Expanded(
+              child: Center(
+                child: _buildSlotFrame(),
               ),
             ),
             if (_showActions)
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: CupertinoButton(
-                            onPressed: _spin,
-                            child: const Text('もう一度回す'),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: CupertinoButton.filled(
-                            onPressed: _handleSave,
-                            child: const Text('保存'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: CupertinoButton(
-                            onPressed: _openEditor,
-                            child: const Text('編集'),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: CupertinoButton(
-                            onPressed: _goBackToTitle,
-                            child: const Text('タイトルに戻る'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              )
+              _buildResultActions()
             else
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: CupertinoButton.filled(
-                    onPressed: _spin,
-                    child: Text(_isSpinning ? '回転中...' : '回す'),
-                  ),
-                ),
-              ),
+              _buildSpinButton(),
           ],
         ),
       ),
     );
   }
-}
 
+  /// スロット筐体全体（フレーム＋リール窓）
+  Widget _buildSlotFrame() {
+    return AspectRatio(
+      aspectRatio: 3 / 4, // 縦長気味の筐体
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              CupertinoColors.white,
+              CupertinoColors.systemGrey6,
+            ],
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 20,
+              offset: Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: Stack(
+              children: [
+                // リール背景
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        CupertinoColors.black.withOpacity(0.06),
+                        CupertinoColors.black.withOpacity(0.02),
+                      ],
+                    ),
+                  ),
+                ),
+                // リール（ListWheelScrollView）
+                _buildSlotReel(),
+                // 中央の窓（選択行を示す帯）
+                IgnorePointer(
+                  child: Center(
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemBackground
+                            .withOpacity(0.90),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: CupertinoColors.separator,
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // 上下の影（フェード）
+                IgnorePointer(
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 44,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0xAAFFFFFF),
+                              Color(0x00FFFFFF),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        height: 44,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [
+                              Color(0xAAFFFFFF),
+                              Color(0x00FFFFFF),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // 結果ラベルのポップアップ
+                _buildResultOverlay(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 縦方向のリール（古典的スロットの「回転部分」）
+  Widget _buildSlotReel() {
+    final options = _roulette.options;
+    if (options.isEmpty) {
+      return const Center(
+        child: Text('項目がありません'),
+      );
+    }
+
+    return ListWheelScrollView.useDelegate(
+      controller: _controller,
+      itemExtent: 44,
+      physics: _isSpinning
+          ? const NeverScrollableScrollPhysics()
+          : const FixedExtentScrollPhysics(),
+      perspective: 0.0015, // ほぼ平面に近い見た目 → 縦スロットっぽい
+      diameterRatio: 2.0,
+      overAndUnderCenterOpacity: 0.25,
+      onSelectedItemChanged: (index) {
+        setState(() {
+          _currentIndex = index % options.length;
+        });
+      },
+      childDelegate: ListWheelChildBuilderDelegate(
+        childCount: options.length * 1000,
+        builder: (context, index) {
+          final opt = options[index % options.length];
+          final isCenter = (index % options.length) == _currentIndex;
+
+          return Center(
+            child: AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 120),
+              style: TextStyle(
+                fontSize: isCenter ? 22 : 18,
+                fontWeight:
+                    isCenter ? FontWeight.w600 : FontWeight.w400,
+                color: isCenter
+                    ? CupertinoColors.label
+                    : CupertinoColors.secondaryLabel,
+              ),
+              child: Text(
+                opt.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// 結果のオーバーレイ（中央にふわっと）
+  Widget _buildResultOverlay() {
+    if (_selectedLabel == null) return const SizedBox.shrink();
+
+    return IgnorePointer(
+      ignoring: !_showActions,
+      child: Center(
+        child: AnimatedScale(
+          scale: _showActions ? 1.0 : 1.05,
+          duration: const Duration(milliseconds: 180),
+          child: Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            decoration: BoxDecoration(
+              color: CupertinoColors.systemBackground.withOpacity(0.95),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                  color: Color(0x33000000),
+                ),
+              ],
+            ),
+            child: Text(
+              _selectedLabel!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// スピン中 or まだ結果が出ていないときのボタン
+  Widget _buildSpinButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: SizedBox(
+        width: double.infinity,
+        child: CupertinoButton.filled(
+          onPressed: _spin,
+          child: Text(_isSpinning ? '回転中…' : '回す'),
+        ),
+      ),
+    );
+  }
+
+  /// 結果表示後のアクションボタン群
+  Widget _buildResultActions() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: CupertinoButton(
+                  onPressed: _spin,
+                  child: const Text('もう一度回す'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: CupertinoButton.filled(
+                  onPressed: _handleSave,
+                  child: const Text('保存'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: CupertinoButton(
+                  onPressed: _openEditor,
+                  child: const Text('編集'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: CupertinoButton(
+                  onPressed: _goBackToTitle,
+                  child: const Text('タイトルに戻る'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
 /// 保存上限時の削除画面
 
 class CleanupPage extends StatefulWidget {
