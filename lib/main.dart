@@ -480,15 +480,16 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
     }
 
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => SpinPage(
-          roulette: _editing,
-          onSaveRequested: (_) {
-            // 編集プレビューからの保存は無視（ホーム側で管理）
-          },
-        ),
-      ),
-    );
+		  MaterialPageRoute(
+		    builder: (_) => SpinPage(
+		      roulette: _editing,
+		      onSaveRequested: (_) async {
+        // 編集プレビューからの保存は無視（ホーム側で管理）
+        // 何もしない
+		      },
+		    ),
+		  ),
+		);
   }
 
   @override
