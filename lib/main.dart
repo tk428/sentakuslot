@@ -466,9 +466,10 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
       CupertinoPageRoute(
         builder: (_) => SpinPage(
           roulette: _editing,
-          onSaveRequested: (_) {
-            // 編集プレビューからの保存は無視（ホーム側で管理）
-          },
+          onSaveRequested: (_) async {
+					  // 編集プレビューからの保存は無視（ホーム側で管理）
+					  return;
+					},
         ),
       ),
     );
