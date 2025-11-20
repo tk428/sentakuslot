@@ -1,6 +1,5 @@
 import 'dart:math';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show Curves; // ← Curves 用
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 void main() {
@@ -13,9 +12,24 @@ class DecisionRouletteApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const CupertinoApp(
+    // Material Design 3 の考え方：
+    // - ColorScheme を基準に色を決める
+    // - 角丸・影・余白で階層を作る
+    // - useMaterial3: true で最新のコンポーネントセットを利用
+    final baseColor = Colors.blue;
+
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: HomePage(),
+      title: '意思決定ルーレット',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: baseColor,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+        scaffoldBackgroundColor: Colors.black,
+      ),
+      home: const HomePage(),
     );
   }
 }
@@ -71,7 +85,7 @@ class Roulette {
   }
 }
 
-/// ===== ホーム画面 =====
+/// ===== ホーム画面：ルーレット一覧 =====
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -88,6 +102,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    // サンプルデータ
     _roulettes.addAll([
       Roulette(
         id: _genId(),
@@ -122,7 +137,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _openSpin(Roulette roulette) async {
     final updated = await Navigator.of(context).push<Roulette>(
-      CupertinoPageRoute(
+      MaterialPageRoute(
         builder: (_) => SpinPage(
           roulette: roulette.clone(),
           onSaveRequested: (r) => _handleSaveFromResult(context, r),
@@ -155,7 +170,7 @@ class _HomePageState extends State<HomePage> {
 
     if (_roulettes.length >= maxSaved) {
       final didDelete = await Navigator.of(context).push<bool>(
-        CupertinoPageRoute(
+        MaterialPageRoute(
           builder: (_) => CleanupPage(
             roulettes: _sortedRoulettes,
             onDeleteConfirmed: (idsToDelete) {
@@ -181,7 +196,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _openEditor({Roulette? roulette}) async {
     final result = await Navigator.of(context).push<Roulette>(
-      CupertinoPageRoute(
+      MaterialPageRoute(
         builder: (_) => EditRoulettePage(
           roulette: roulette?.clone(),
         ),
@@ -199,7 +214,7 @@ class _HomePageState extends State<HomePage> {
     } else {
       if (_roulettes.length >= maxSaved) {
         final didDelete = await Navigator.of(context).push<bool>(
-          CupertinoPageRoute(
+          MaterialPageRoute(
             builder: (_) => CleanupPage(
               roulettes: _sortedRoulettes,
               onDeleteConfirmed: (idsToDelete) {
@@ -227,25 +242,25 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _deleteRoulette(Roulette r) {
-    showCupertinoDialog(
+    showDialog(
       context: context,
-      builder: (_) => CupertinoAlertDialog(
+      builder: (_) => AlertDialog(
         title: const Text('削除しますか？'),
         content: Text('「${r.title}」を削除します。'),
         actions: [
-          CupertinoDialogAction(
-            isDestructiveAction: true,
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
             onPressed: () {
               Navigator.of(context).pop();
               setState(() {
                 _roulettes.removeWhere((x) => x.id == r.id);
               });
             },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('削除'),
-          ),
-          CupertinoDialogAction(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('キャンセル'),
           ),
         ],
       ),
@@ -255,99 +270,107 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final items = _sortedRoulettes;
+    final scheme = Theme.of(context).colorScheme;
 
-    return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('意思決定ルーレット'),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('意思決定ルーレット'),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
       ),
-      child: SafeArea(
-        bottom: true,
+      body: SafeArea(
         child: Column(
           children: [
             Expanded(
               child: items.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
                         'ルーレットがありません。\n「＋」から追加してください。',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: scheme.onBackground.withOpacity(0.7),
+                        ),
                       ),
                     )
                   : ListView.separated(
+                      padding: const EdgeInsets.only(
+                          left: 16, right: 16, bottom: 16, top: 8),
                       itemCount: items.length,
-                      separatorBuilder: (_, __) => Container(
-                        height: 0.5,
-                        color: CupertinoColors.systemGrey4,
-                      ),
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final r = items[index];
-                        return CupertinoButton(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          onPressed: () => _openSpin(r),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  r.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 17,
+                        return Material(
+                          color: scheme.surfaceVariant.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(16),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () => _openSpin(r),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          r.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${r.options.length} 件の項目',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: scheme.onSurfaceVariant
+                                                .withOpacity(0.8),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ),
-                              if (r.isFavorite)
-                                const Padding(
-                                  padding: EdgeInsets.only(left: 8.0),
-                                  child: Icon(
-                                    CupertinoIcons.star_fill,
-                                    size: 18,
-                                    color: CupertinoColors.systemYellow,
+                                  IconButton(
+                                    onPressed: () => _toggleFavorite(r),
+                                    icon: Icon(
+                                      r.isFavorite
+                                          ? Icons.star
+                                          : Icons.star_border,
+                                      color: Colors.amber,
+                                    ),
                                   ),
-                                ),
-                              const SizedBox(width: 12),
-                              CupertinoButton(
-                                padding: EdgeInsets.zero,
-                                onPressed: () => _toggleFavorite(r),
-                                child: Icon(
-                                  r.isFavorite
-                                      ? CupertinoIcons.star_fill
-                                      : CupertinoIcons.star,
-                                  size: 22,
-                                  color: CupertinoColors.systemYellow,
-                                ),
+                                  IconButton(
+                                    onPressed: () =>
+                                        _openEditor(roulette: r),
+                                    icon: const Icon(Icons.edit),
+                                  ),
+                                  IconButton(
+                                    onPressed: () => _deleteRoulette(r),
+                                    icon: const Icon(Icons.delete_outline),
+                                    color: scheme.error,
+                                  ),
+                                ],
                               ),
-                              CupertinoButton(
-                                padding: EdgeInsets.zero,
-                                onPressed: () => _openEditor(roulette: r),
-                                child: const Icon(
-                                  CupertinoIcons.pencil,
-                                  size: 22,
-                                ),
-                              ),
-                              CupertinoButton(
-                                padding: EdgeInsets.zero,
-                                onPressed: () => _deleteRoulette(r),
-                                child: const Icon(
-                                  CupertinoIcons.delete,
-                                  size: 22,
-                                  color: CupertinoColors.systemRed,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         );
                       },
                     ),
             ),
-            Container(
-              padding: const EdgeInsets.all(16),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: SizedBox(
                 width: double.infinity,
-                child: CupertinoButton.filled(
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.add),
                   onPressed: () {
                     _openEditor(
                       roulette: Roulette(
@@ -357,7 +380,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                     );
                   },
-                  child: const Text('＋ 新しいルーレット'),
+                  label: const Text('新しいルーレット'),
                 ),
               ),
             ),
@@ -368,13 +391,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-/// ===== 編集画面 =====
-/// （ここから下は、あなたが貼ってくれた EditRoulettePage / SpinPage / CleanupPage をそのまま使ってOK）
-/// もしこのあともエラーが出る場合は、ログの「一番最初の赤いエラー行」
-/// （`lib/main.dart:◯:◯` の行）を見れば、どの行が原因かが分かる。
-///
-/// ひとまず今は main.dart の頭〜HomePage までだけ貼り替えてもらえれば十分。
-/// 編集画面：項目名 + 比率 + ゴミ箱 / 下に回す・保存
+/// ===== 編集画面：項目名 + 比率 + ゴミ箱 / 下に回す・保存 =====
 
 class EditRoulettePage extends StatefulWidget {
   const EditRoulettePage({super.key, this.roulette});
@@ -425,9 +442,9 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
 
   void _saveAndClose() {
     if (_editing.title.trim().isEmpty) {
-      showCupertinoDialog(
+      showDialog(
         context: context,
-        builder: (_) => const CupertinoAlertDialog(
+        builder: (_) => const AlertDialog(
           title: Text('タイトルが空です'),
           content: Text('ルーレットのタイトルを入力してください。'),
         ),
@@ -436,9 +453,9 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
     }
     if (_editing.options.length < 2 ||
         _editing.options.any((o) => o.label.trim().isEmpty)) {
-      showCupertinoDialog(
+      showDialog(
         context: context,
-        builder: (_) => const CupertinoAlertDialog(
+        builder: (_) => const AlertDialog(
           title: Text('項目が足りません'),
           content: Text('2つ以上の有効な項目を設定してください。'),
         ),
@@ -452,9 +469,9 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
   void _openSpinPreview() {
     if (_editing.options.length < 2 ||
         _editing.options.any((o) => o.label.trim().isEmpty)) {
-      showCupertinoDialog(
+      showDialog(
         context: context,
-        builder: (_) => const CupertinoAlertDialog(
+        builder: (_) => const AlertDialog(
           title: Text('項目が足りません'),
           content: Text('2つ以上の有効な項目を設定してから回してください。'),
         ),
@@ -463,13 +480,12 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
     }
 
     Navigator.of(context).push(
-      CupertinoPageRoute(
+      MaterialPageRoute(
         builder: (_) => SpinPage(
           roulette: _editing,
-          onSaveRequested: (_) async {
-					  // 編集プレビューからの保存は無視（ホーム側で管理）
-					  return;
-					},
+          onSaveRequested: (_) {
+            // 編集プレビューからの保存は無視（ホーム側で管理）
+          },
         ),
       ),
     );
@@ -478,24 +494,29 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
   @override
   Widget build(BuildContext context) {
     final options = _editing.options;
+    final scheme = Theme.of(context).colorScheme;
 
-    return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: const Text('ルーレット編集'),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: _saveAndClose,
-          child: const Text('保存'),
-        ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('ルーレット編集'),
+        actions: [
+          TextButton(
+            onPressed: _saveAndClose,
+            child: const Text('保存'),
+          ),
+        ],
       ),
-      child: SafeArea(
+      body: SafeArea(
         child: Column(
           children: [
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
-              child: CupertinoTextField(
-                placeholder: 'タイトル（例：アリ or ナシ？）',
+              child: TextField(
+                decoration: const InputDecoration(
+                  labelText: 'タイトル（例：アリ or ナシ？）',
+                  border: OutlineInputBorder(),
+                ),
                 controller: TextEditingController(text: _editing.title),
                 onChanged: (v) => _editing.title = v,
                 maxLength: 30,
@@ -506,15 +527,17 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
             ),
             Expanded(
               child: ListView.builder(
+                padding: const EdgeInsets.only(bottom: 16),
                 itemCount: options.length + 1,
                 itemBuilder: (context, index) {
                   if (index == options.length) {
                     return Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16.0, vertical: 8),
-                      child: CupertinoButton(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.add),
                         onPressed: _addOption,
-                        child: const Text('＋ 項目を追加'),
+                        label: const Text('項目を追加'),
                       ),
                     );
                   }
@@ -523,72 +546,70 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
                   return Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16.0, vertical: 6),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: CupertinoTextField(
-                            placeholder: '項目名',
-                            controller:
-                                TextEditingController(text: opt.label),
-                            onChanged: (v) => opt.label = v,
-                            maxLength: 30,
-                            inputFormatters: [
-                              LengthLimitingTextInputFormatter(30),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Row(
+                    child: Material(
+                      color: scheme.surfaceVariant.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        child: Row(
                           children: [
-                            CupertinoButton(
-                              padding: EdgeInsets.zero,
-                              onPressed: () => _changeWeight(opt, -1),
-                              child: const Icon(
-                                CupertinoIcons.minus_circle,
-                                size: 22,
+                            Expanded(
+                              child: TextField(
+                                decoration: const InputDecoration(
+                                  hintText: '項目名',
+                                  border: InputBorder.none,
+                                ),
+                                controller:
+                                    TextEditingController(text: opt.label),
+                                onChanged: (v) => opt.label = v,
+                                maxLength: 30,
+                                inputFormatters: [
+                                  LengthLimitingTextInputFormatter(30),
+                                ],
                               ),
                             ),
-                            Text(
-                              opt.weight.toString(),
-                              style: const TextStyle(fontSize: 16),
+                            const SizedBox(width: 8),
+                            Row(
+                              children: [
+                                IconButton(
+                                  onPressed: () => _changeWeight(opt, -1),
+                                  icon: const Icon(Icons.remove_circle_outline),
+                                ),
+                                Text(opt.weight.toString()),
+                                IconButton(
+                                  onPressed: () => _changeWeight(opt, 1),
+                                  icon: const Icon(Icons.add_circle_outline),
+                                ),
+                              ],
                             ),
-                            CupertinoButton(
-                              padding: EdgeInsets.zero,
-                              onPressed: () => _changeWeight(opt, 1),
-                              child: const Icon(
-                                CupertinoIcons.plus_circle,
-                                size: 22,
-                              ),
+                            IconButton(
+                              onPressed: () => _removeOption(opt),
+                              icon: const Icon(Icons.delete_outline),
+                              color: scheme.error,
                             ),
                           ],
                         ),
-                        CupertinoButton(
-                          padding: EdgeInsets.zero,
-                          onPressed: () => _removeOption(opt),
-                          child: const Icon(
-                            CupertinoIcons.delete,
-                            color: CupertinoColors.systemRed,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   );
                 },
               ),
             ),
-            Container(
-              padding: const EdgeInsets.all(16),
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
               child: Row(
                 children: [
                   Expanded(
-                    child: CupertinoButton(
+                    child: OutlinedButton(
                       onPressed: _openSpinPreview,
                       child: const Text('回す'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: CupertinoButton.filled(
+                    child: FilledButton(
                       onPressed: _saveAndClose,
                       child: const Text('保存'),
                     ),
@@ -603,9 +624,7 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
   }
 }
 
-/// スロット画面
-
-/// スロット画面（Apple公式っぽいデザイン版）
+/// ===== スロット画面 =====
 
 class SpinPage extends StatefulWidget {
   const SpinPage({
@@ -629,8 +648,6 @@ class _SpinPageState extends State<SpinPage> {
   bool _isSpinning = false;
   String? _selectedLabel;
   bool _showActions = false;
-
-  // 中央行を太字にするためのインデックス
   int _currentIndex = 0;
 
   @override
@@ -666,7 +683,6 @@ class _SpinPageState extends State<SpinPage> {
     final random = Random();
     final targetIndexInOptions = weights[random.nextInt(weights.length)];
 
-    // ある程度ぐるぐる回ってから止まるように大きいインデックスに飛ばす
     const int loopCount = 20;
     final base = _roulette.options.length * loopCount;
     final targetItem = base + targetIndexInOptions;
@@ -684,7 +700,6 @@ class _SpinPageState extends State<SpinPage> {
       _currentIndex = targetIndexInOptions;
     });
 
-    // 1秒後にボタン表示
     await Future.delayed(const Duration(seconds: 1));
     if (!mounted) return;
     setState(() {
@@ -702,7 +717,7 @@ class _SpinPageState extends State<SpinPage> {
 
   void _openEditor() {
     Navigator.of(context).push(
-      CupertinoPageRoute(
+      MaterialPageRoute(
         builder: (_) => EditRoulettePage(
           roulette: _roulette,
         ),
@@ -710,90 +725,117 @@ class _SpinPageState extends State<SpinPage> {
     );
   }
 
-  // ===== UI 部分 =====
-
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final titleText = _roulette.title.isEmpty ? 'ルーレット' : _roulette.title;
 
-    return CupertinoPageScaffold(
-      backgroundColor: CupertinoColors.systemGroupedBackground,
-      navigationBar: CupertinoNavigationBar(
-        middle: Text(titleText),
-        backgroundColor:
-            CupertinoColors.systemBackground.withOpacity(0.9),
-        border: null,
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(titleText),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
-      child: SafeArea(
+      body: SafeArea(
         child: Column(
           children: [
             const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  _roulette.title.isEmpty ? ' ' : _roulette.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'タップして回す',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: CupertinoColors.secondaryLabel,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // スロット筐体
+            _buildTitleBubble(scheme),
+            const SizedBox(height: 24),
             Expanded(
               child: Center(
-                child: _buildSlotFrame(),
+                child: GestureDetector(
+                  onTap: _spin,
+                  child: _buildSlotFrame(scheme),
+                ),
               ),
             ),
-            if (_showActions)
-              _buildResultActions()
-            else
-              _buildSpinButton(),
+            if (_showActions) _buildResultActions(scheme) else _buildSpinButton(),
           ],
         ),
       ),
     );
   }
 
-  /// スロット筐体全体（フレーム＋リール窓）
-  Widget _buildSlotFrame() {
+  /// 上半分：カラフルな吹き出しタイトル
+  Widget _buildTitleBubble(ColorScheme scheme) {
+    final subtitle = 'タップして回す';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              scheme.primary,
+              scheme.tertiary,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x55000000),
+              blurRadius: 20,
+              offset: Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '意思決定ルーレット',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: scheme.onPrimary,
+                    letterSpacing: 0.5,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _roulette.title.isEmpty ? 'タイトル未設定' : _roulette.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: scheme.onPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onPrimary.withOpacity(0.85),
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 下半分：スロット筐体
+  Widget _buildSlotFrame(ColorScheme scheme) {
     return AspectRatio(
-      aspectRatio: 3 / 4, // 縦長気味の筐体
+      aspectRatio: 3 / 4,
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              CupertinoColors.white,
-              CupertinoColors.systemGrey6,
+              scheme.surfaceVariant.withOpacity(0.9),
+              scheme.surface.withOpacity(0.9),
             ],
           ),
           boxShadow: const [
             BoxShadow(
               color: Color(0x33000000),
-              blurRadius: 20,
-              offset: Offset(0, 12),
+              blurRadius: 24,
+              offset: Offset(0, 16),
             ),
           ],
         ),
@@ -803,65 +845,65 @@ class _SpinPageState extends State<SpinPage> {
             borderRadius: BorderRadius.circular(18),
             child: Stack(
               children: [
-                // リール背景
+                // 背景
                 Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        CupertinoColors.black.withOpacity(0.06),
-                        CupertinoColors.black.withOpacity(0.02),
+                        scheme.inverseSurface.withOpacity(0.15),
+                        scheme.surface.withOpacity(0.05),
                       ],
                     ),
                   ),
                 ),
-                // リール（ListWheelScrollView）
-                _buildSlotReel(),
-                // 中央の窓（選択行を示す帯）
+                // リール
+                _buildSlotReel(scheme),
+                // 中央ハイライト窓
                 IgnorePointer(
                   child: Center(
                     child: Container(
-                      height: 44,
+                      height: 48,
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
-                        color: CupertinoColors.systemBackground
-                            .withOpacity(0.90),
-                        borderRadius: BorderRadius.circular(12),
+                        color: scheme.primaryContainer.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: CupertinoColors.separator,
+                          color: scheme.onPrimaryContainer.withOpacity(0.15),
                           width: 1,
                         ),
                       ),
                     ),
                   ),
                 ),
-                // 上下の影（フェード）
+                // 上下フェード
                 IgnorePointer(
                   child: Column(
                     children: [
                       Container(
-                        height: 44,
-                        decoration: const BoxDecoration(
+                        height: 56,
+                        decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              Color(0xAAFFFFFF),
-                              Color(0x00FFFFFF),
+                              scheme.surface.withOpacity(0.95),
+                              scheme.surface.withOpacity(0.0),
                             ],
                           ),
                         ),
                       ),
                       const Spacer(),
                       Container(
-                        height: 44,
-                        decoration: const BoxDecoration(
+                        height: 56,
+                        decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.bottomCenter,
                             end: Alignment.topCenter,
                             colors: [
-                              Color(0xAAFFFFFF),
-                              Color(0x00FFFFFF),
+                              scheme.surface.withOpacity(0.95),
+                              scheme.surface.withOpacity(0.0),
                             ],
                           ),
                         ),
@@ -869,8 +911,8 @@ class _SpinPageState extends State<SpinPage> {
                     ],
                   ),
                 ),
-                // 結果ラベルのポップアップ
-                _buildResultOverlay(),
+                // 結果オーバーレイ
+                _buildResultOverlay(scheme),
               ],
             ),
           ),
@@ -879,8 +921,8 @@ class _SpinPageState extends State<SpinPage> {
     );
   }
 
-  /// 縦方向のリール（古典的スロットの「回転部分」）
-  Widget _buildSlotReel() {
+  /// 実際に縦に回るリール部分
+  Widget _buildSlotReel(ColorScheme scheme) {
     final options = _roulette.options;
     if (options.isEmpty) {
       return const Center(
@@ -890,11 +932,10 @@ class _SpinPageState extends State<SpinPage> {
 
     return ListWheelScrollView.useDelegate(
       controller: _controller,
-      itemExtent: 44,
-      physics: _isSpinning
-          ? const NeverScrollableScrollPhysics()
-          : const FixedExtentScrollPhysics(),
-      perspective: 0.0015, // ほぼ平面に近い見た目 → 縦スロットっぽい
+      itemExtent: 48,
+      // ★ ここでユーザー操作を完全封鎖 → ボタン / タップでのみ回る
+      physics: const NeverScrollableScrollPhysics(),
+      perspective: 0.0015,
       diameterRatio: 2.0,
       overAndUnderCenterOpacity: 0.25,
       onSelectedItemChanged: (index) {
@@ -910,14 +951,14 @@ class _SpinPageState extends State<SpinPage> {
 
           return Center(
             child: AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 120),
+              duration: const Duration(milliseconds: 140),
               style: TextStyle(
                 fontSize: isCenter ? 22 : 18,
                 fontWeight:
-                    isCenter ? FontWeight.w600 : FontWeight.w400,
+                    isCenter ? FontWeight.w700 : FontWeight.w400,
                 color: isCenter
-                    ? CupertinoColors.label
-                    : CupertinoColors.secondaryLabel,
+                    ? scheme.onPrimaryContainer
+                    : scheme.onSurfaceVariant,
               ),
               child: Text(
                 opt.label,
@@ -931,8 +972,8 @@ class _SpinPageState extends State<SpinPage> {
     );
   }
 
-  /// 結果のオーバーレイ（中央にふわっと）
-  Widget _buildResultOverlay() {
+  /// 結果ラベルのオーバーレイ
+  Widget _buildResultOverlay(ColorScheme scheme) {
     if (_selectedLabel == null) return const SizedBox.shrink();
 
     return IgnorePointer(
@@ -945,13 +986,13 @@ class _SpinPageState extends State<SpinPage> {
             padding:
                 const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             decoration: BoxDecoration(
-              color: CupertinoColors.systemBackground.withOpacity(0.95),
+              color: scheme.surface.withOpacity(0.95),
               borderRadius: BorderRadius.circular(16),
               boxShadow: const [
                 BoxShadow(
-                  blurRadius: 20,
-                  offset: Offset(0, 10),
-                  color: Color(0x33000000),
+                  blurRadius: 24,
+                  offset: Offset(0, 12),
+                  color: Color(0x66000000),
                 ),
               ],
             ),
@@ -959,9 +1000,10 @@ class _SpinPageState extends State<SpinPage> {
               _selectedLabel!,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
+                color: scheme.primary,
               ),
             ),
           ),
@@ -970,13 +1012,12 @@ class _SpinPageState extends State<SpinPage> {
     );
   }
 
-  /// スピン中 or まだ結果が出ていないときのボタン
   Widget _buildSpinButton() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
       child: SizedBox(
         width: double.infinity,
-        child: CupertinoButton.filled(
+        child: FilledButton(
           onPressed: _spin,
           child: Text(_isSpinning ? '回転中…' : '回す'),
         ),
@@ -984,24 +1025,23 @@ class _SpinPageState extends State<SpinPage> {
     );
   }
 
-  /// 結果表示後のアクションボタン群
-  Widget _buildResultActions() {
+  Widget _buildResultActions(ColorScheme scheme) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
               Expanded(
-                child: CupertinoButton(
+                child: OutlinedButton(
                   onPressed: _spin,
                   child: const Text('もう一度回す'),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: CupertinoButton.filled(
+                child: FilledButton(
                   onPressed: _handleSave,
                   child: const Text('保存'),
                 ),
@@ -1012,27 +1052,27 @@ class _SpinPageState extends State<SpinPage> {
           Row(
             children: [
               Expanded(
-                child: CupertinoButton(
+                child: OutlinedButton(
                   onPressed: _openEditor,
                   child: const Text('編集'),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: CupertinoButton(
+                child: TextButton(
                   onPressed: _goBackToTitle,
                   child: const Text('タイトルに戻る'),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
         ],
       ),
     );
   }
 }
-/// 保存上限時の削除画面
+
+/// ===== 保存上限時の削除画面 =====
 
 class CleanupPage extends StatefulWidget {
   const CleanupPage({
@@ -1063,41 +1103,45 @@ class _CleanupPageState extends State<CleanupPage> {
 
   Future<void> _handleDelete() async {
     if (_selectedIds.isEmpty) {
-      final result = await showCupertinoDialog<bool>(
+      final result = await showDialog<bool>(
         context: context,
-        builder: (_) => const CupertinoAlertDialog(
-          title: Text('何も削除されません'),
-          content: Text('保存されませんがよろしいですか？'),
+        builder: (_) => AlertDialog(
+          title: const Text('何も削除されません'),
+          content: const Text('保存されませんがよろしいですか？'),
           actions: [
-            CupertinoDialogAction(
-              isDestructiveAction: true,
-              child: Text('はい'),
-              // true = 削除せず終了
+            TextButton(
+              child: const Text('いいえ'),
+              onPressed: () => Navigator.of(context).pop(false),
             ),
-            CupertinoDialogAction(
-              child: Text('いいえ'),
+            TextButton(
+              style:
+                  TextButton.styleFrom(foregroundColor: Colors.redAccent),
+              child: const Text('はい'),
+              onPressed: () => Navigator.of(context).pop(true),
             ),
           ],
         ),
       );
 
       if (result == true) {
-        Navigator.of(context).pop(false); // didDelete = false
+        Navigator.of(context).pop(false);
       }
       return;
     }
 
     widget.onDeleteConfirmed(_selectedIds.toList());
-    Navigator.of(context).pop(true); // didDelete = true
+    Navigator.of(context).pop(true);
   }
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('削除するルーレットを選択'),
+    final scheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('削除するルーレットを選択'),
       ),
-      child: SafeArea(
+      body: SafeArea(
         child: Column(
           children: [
             const Padding(
@@ -1109,46 +1153,63 @@ class _CleanupPageState extends State<CleanupPage> {
             ),
             Expanded(
               child: ListView.separated(
+                padding: const EdgeInsets.all(16),
                 itemCount: widget.roulettes.length,
-                separatorBuilder: (_, __) =>
-                    Container(height: 0.5, color: CupertinoColors.systemGrey4),
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
                   final r = widget.roulettes[index];
                   final selected = _selectedIds.contains(r.id);
-                  return CupertinoButton(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    onPressed: () => _toggle(r.id),
-                    child: Row(
-                      children: [
-                        Icon(
-                          selected
-                              ? CupertinoIcons.check_mark_circled_solid
-                              : CupertinoIcons.circle,
-                          color: selected
-                              ? CupertinoColors.activeBlue
-                              : CupertinoColors.inactiveGray,
+                  return Material(
+                    color: selected
+                        ? scheme.primaryContainer.withOpacity(0.6)
+                        : scheme.surfaceVariant.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => _toggle(r.id),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        child: Row(
+                          children: [
+                            Icon(
+                              selected
+                                  ? Icons.check_circle
+                                  : Icons.radio_button_unchecked,
+                              color: selected
+                                  ? scheme.onPrimaryContainer
+                                  : scheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                r.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 17),
+                              ),
+                            ),
+                            Text(
+                              '${r.options.length} 件',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            r.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 17),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   );
                 },
               ),
             ),
-            Container(
-              padding: const EdgeInsets.all(16),
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: SizedBox(
                 width: double.infinity,
-                child: CupertinoButton.filled(
+                child: FilledButton(
                   onPressed: _handleDelete,
                   child: const Text('削除して終了'),
                 ),
