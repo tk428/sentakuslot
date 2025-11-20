@@ -37,10 +37,9 @@ jobs:
         run: flutter pub get
 
       - name: Build web
-        run: flutter build web --release --base-href "/roulette/"
-        # 必要なら renderer 指定も可（Flutter が新しければ）
-        # run: flutter build web --release --web-renderer html --base-href "/roulette/"
-
+        run: flutter build web --release --base-href "/sentakuslot/"
+  # もしくはシンプルに
+  # run: flutter build web --release --base-href "/"
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
