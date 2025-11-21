@@ -833,10 +833,10 @@ class _SpinPageState extends State<SpinPage> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
+          // 吹き出し本体
           Container(
             width: double.infinity,
-            padding:
-                const EdgeInsets.fromLTRB(24, 18, 24, 22),
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 22),
             decoration: BoxDecoration(
               color: bubbleColor,
               borderRadius: BorderRadius.circular(32),
@@ -887,44 +887,32 @@ class _SpinPageState extends State<SpinPage> {
               ],
             ),
           ),
-          // しっぽ
-          const Positioned(
+
+          // しっぽ（小さいひし形を回転させる）
+          Positioned(
             bottom: -14,
             left: 0,
             right: 0,
             child: Center(
-              child: _BubbleTail(),
+              child: Transform.rotate(
+                angle: pi / 4,
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: bubbleColor,
+                    border: Border.all(
+                      color: borderColor,
+                      width: 3,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ],
       ),
     );
-  }
-
-  /// しっぽだけ別ウィジェット
-  static const _borderColor = Color(0xFFA86A1A);
-  static const _bubbleColor = Color(0xFFFFF176);
-
-  class _BubbleTail extends StatelessWidget {
-    const _BubbleTail();
-
-    @override
-    Widget build(BuildContext context) {
-      return Transform.rotate(
-        angle: pi / 4,
-        child: Container(
-          width: 22,
-          height: 22,
-          decoration: BoxDecoration(
-            color: _bubbleColor,
-            border: Border.all(
-              color: _borderColor,
-              width: 3,
-            ),
-          ),
-        ),
-      );
-    }
   }
 
   /// スロット筐体（吹き出しと同じくらいの横幅）
@@ -989,7 +977,7 @@ class _SpinPageState extends State<SpinPage> {
                       ),
                     ),
                   ),
-                  // 上下フェード（少し弱めにして見えやすく）
+                  // 上下フェード
                   IgnorePointer(
                     child: Column(
                       children: [
@@ -1048,7 +1036,7 @@ class _SpinPageState extends State<SpinPage> {
       physics: const NeverScrollableScrollPhysics(),
       perspective: 0.0015,
       diameterRatio: 2.0,
-      overAndUnderCenterOpacity: 0.6, // 少しだけ薄く
+      overAndUnderCenterOpacity: 0.6,
       onSelectedItemChanged: (index) {
         setState(() {
           _currentIndex = index % options.length;
@@ -1165,8 +1153,8 @@ class _SpinPageState extends State<SpinPage> {
                     padding:
                         const EdgeInsets.symmetric(vertical: 14),
                     shape: const StadiumBorder(),
-                    side: BorderSide(
-                      color: const Color(0xFF00897B),
+                    side: const BorderSide(
+                      color: Color(0xFF00897B),
                       width: 2,
                     ),
                   ),
