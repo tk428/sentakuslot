@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,22 +13,30 @@ class DecisionRouletteApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Material Design 3 の考え方：
-    // - ColorScheme を基準に色を決める
-    // - 角丸・影・余白で階層を作る
-    // - useMaterial3: true で最新のコンポーネントセットを利用
-    final baseColor = Colors.blue;
+    const seed = Color(0xFFFFB300); // 明るいイエロー系
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: '意思決定ルーレット',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: baseColor,
-          brightness: Brightness.dark,
+          seedColor: seed,
+          brightness: Brightness.light,
         ),
+        scaffoldBackgroundColor: const Color(0xFFF4F6FB),
         useMaterial3: true,
-        scaffoldBackgroundColor: Colors.black,
+        fontFamily: 'SF Pro Display', // なければシステムフォントにフォールバック
+        textTheme: const TextTheme(
+          titleLarge: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.2,
+          ),
+          bodyMedium: TextStyle(
+            fontSize: 15,
+            letterSpacing: 0.1,
+          ),
+        ),
       ),
       home: const HomePage(),
     );
@@ -46,6 +55,9 @@ class RouletteOption {
   final String id;
   String label; // 1〜30文字
   int weight; // 1〜10
+
+  RouletteOption clone() =>
+      RouletteOption(id: id, label: label, weight: weight);
 }
 
 class Roulette {
@@ -72,15 +84,7 @@ class Roulette {
       title: title,
       isFavorite: isFavorite,
       lastUsed: lastUsed,
-      options: options
-          .map(
-            (o) => RouletteOption(
-              id: o.id,
-              label: o.label,
-              weight: o.weight,
-            ),
-          )
-          .toList(),
+      options: options.map((o) => o.clone()).toList(),
     );
   }
 }
@@ -102,7 +106,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // サンプルデータ
     _roulettes.addAll([
       Roulette(
         id: _genId(),
@@ -184,9 +187,7 @@ class _HomePageState extends State<HomePage> {
         ),
       );
 
-      if (didDelete != true) {
-        return;
-      }
+      if (didDelete != true) return;
     }
 
     setState(() {
@@ -286,7 +287,7 @@ class _HomePageState extends State<HomePage> {
               child: items.isEmpty
                   ? Center(
                       child: Text(
-                        'ルーレットがありません。\n「＋」から追加してください。',
+                        'ルーレットがありません。\n「新しいルーレット」から追加してください。',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 16,
@@ -295,14 +296,15 @@ class _HomePageState extends State<HomePage> {
                       ),
                     )
                   : ListView.separated(
-                      padding: const EdgeInsets.only(
-                          left: 16, right: 16, bottom: 16, top: 8),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                       itemCount: items.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final r = items[index];
                         return Material(
-                          color: scheme.surfaceVariant.withOpacity(0.3),
+                          color: scheme.surface,
+                          elevation: 1,
+                          shadowColor: Colors.black26,
                           borderRadius: BorderRadius.circular(16),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(16),
@@ -322,7 +324,7 @@ class _HomePageState extends State<HomePage> {
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
-                                            fontSize: 17,
+                                            fontSize: 18,
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
@@ -331,28 +333,30 @@ class _HomePageState extends State<HomePage> {
                                           '${r.options.length} 件の項目',
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: scheme.onSurfaceVariant
-                                                .withOpacity(0.8),
+                                            color: scheme.onSurfaceVariant,
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
                                   IconButton(
+                                    tooltip: 'お気に入り',
                                     onPressed: () => _toggleFavorite(r),
                                     icon: Icon(
                                       r.isFavorite
                                           ? Icons.star
                                           : Icons.star_border,
-                                      color: Colors.amber,
+                                      color: Colors.amber[700],
                                     ),
                                   ),
                                   IconButton(
+                                    tooltip: '編集',
                                     onPressed: () =>
                                         _openEditor(roulette: r),
-                                    icon: const Icon(Icons.edit),
+                                    icon: const Icon(Icons.edit_outlined),
                                   ),
                                   IconButton(
+                                    tooltip: '削除',
                                     onPressed: () => _deleteRoulette(r),
                                     icon: const Icon(Icons.delete_outline),
                                     color: scheme.error,
@@ -366,7 +370,8 @@ class _HomePageState extends State<HomePage> {
                     ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16),
               child: SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
@@ -391,7 +396,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-/// ===== 編集画面：項目名 + 比率 + ゴミ箱 / 下に回す・保存 =====
+/// ===== 編集画面 =====
 
 class EditRoulettePage extends StatefulWidget {
   const EditRoulettePage({super.key, this.roulette});
@@ -480,16 +485,15 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
     }
 
     Navigator.of(context).push(
-		  MaterialPageRoute(
-		    builder: (_) => SpinPage(
-		      roulette: _editing,
-		      onSaveRequested: (_) async {
-        // 編集プレビューからの保存は無視（ホーム側で管理）
-        // 何もしない
-		      },
-		    ),
-		  ),
-		);
+      MaterialPageRoute(
+        builder: (_) => SpinPage(
+          roulette: _editing.clone(),
+          onSaveRequested: (_) async {
+            // プレビューからホームへの保存はここでは何もしない
+          },
+        ),
+      ),
+    );
   }
 
   @override
@@ -548,11 +552,13 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16.0, vertical: 6),
                     child: Material(
-                      color: scheme.surfaceVariant.withOpacity(0.4),
+                      color: scheme.surface,
+                      elevation: 1,
+                      shadowColor: Colors.black12,
                       borderRadius: BorderRadius.circular(12),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
+                            horizontal: 12, vertical: 6),
                         child: Row(
                           children: [
                             Expanded(
@@ -663,7 +669,7 @@ class _SpinPageState extends State<SpinPage> {
     super.dispose();
   }
 
-  void _spin() async {
+  Future<void> _spin() async {
     if (_isSpinning) return;
     if (_roulette.options.length < 2) return;
 
@@ -673,10 +679,12 @@ class _SpinPageState extends State<SpinPage> {
       _selectedLabel = null;
     });
 
+    final options = _roulette.options;
+
     // 重み付きランダム
     final weights = <int>[];
-    for (var i = 0; i < _roulette.options.length; i++) {
-      final w = _roulette.options[i].weight;
+    for (var i = 0; i < options.length; i++) {
+      final w = options[i].weight;
       for (var j = 0; j < w; j++) {
         weights.add(i);
       }
@@ -684,24 +692,30 @@ class _SpinPageState extends State<SpinPage> {
     final random = Random();
     final targetIndexInOptions = weights[random.nextInt(weights.length)];
 
-    const int loopCount = 20;
-    final base = _roulette.options.length * loopCount;
-    final targetItem = base + targetIndexInOptions;
+    // いまの位置から必ず「何周か」してから止まるようにする
+    final currentRaw =
+        _controller.hasClients ? _controller.selectedItem : 0;
+    final currentMod = currentRaw % options.length;
+    const int loopCount = 8; // 8周回ってから止まる
+    final stepsToTarget = (targetIndexInOptions - currentMod + options.length) %
+        options.length;
+    final targetItem =
+        currentRaw + loopCount * options.length + stepsToTarget;
 
     await _controller.animateToItem(
       targetItem,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 1700),
       curve: Curves.easeOutCubic,
     );
 
     setState(() {
       _isSpinning = false;
-      _selectedLabel = _roulette.options[targetIndexInOptions].label;
+      _selectedLabel = options[targetIndexInOptions].label;
       _roulette.lastUsed = DateTime.now();
       _currentIndex = targetIndexInOptions;
     });
 
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(milliseconds: 600));
     if (!mounted) return;
     setState(() {
       _showActions = true;
@@ -716,14 +730,21 @@ class _SpinPageState extends State<SpinPage> {
     Navigator.of(context).pop(_roulette);
   }
 
-  void _openEditor() {
-    Navigator.of(context).push(
+  Future<void> _openEditor() async {
+    final edited = await Navigator.of(context).push<Roulette>(
       MaterialPageRoute(
         builder: (_) => EditRoulettePage(
-          roulette: _roulette,
+          roulette: _roulette.clone(),
         ),
       ),
     );
+    if (edited != null) {
+      setState(() {
+        _roulette = edited;
+        _selectedLabel = null;
+        _showActions = false;
+      });
+    }
   }
 
   @override
@@ -740,15 +761,22 @@ class _SpinPageState extends State<SpinPage> {
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 12),
-            _buildTitleBubble(scheme),
-            const SizedBox(height: 24),
             Expanded(
-              child: Center(
-                child: GestureDetector(
-                  onTap: _spin,
-                  child: _buildSlotFrame(scheme),
-                ),
+              flex: 5,
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  _buildTitleBubble(scheme),
+                  const SizedBox(height: 18),
+                  Expanded(
+                    child: Center(
+                      child: GestureDetector(
+                        onTap: _spin, // 吹き出しの下の筐体タップでも回る
+                        child: _buildSlotFrame(scheme),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             if (_showActions) _buildResultActions(scheme) else _buildSpinButton(),
@@ -758,58 +786,65 @@ class _SpinPageState extends State<SpinPage> {
     );
   }
 
-  /// 上半分：カラフルな吹き出しタイトル
+  /// 上半分：でかい吹き出しタイトル
   Widget _buildTitleBubble(ColorScheme scheme) {
-    final subtitle = 'タップして回す';
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              scheme.primary,
-              scheme.tertiary,
+              Color(0xFFFFF59D), // 明るいイエロー
+              Color(0xFFFFE082), // すこしオレンジ寄り
             ],
           ),
           borderRadius: BorderRadius.circular(28),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x55000000),
-              blurRadius: 20,
+              color: Color(0x33212121),
+              blurRadius: 18,
               offset: Offset(0, 10),
             ),
           ],
+          border: Border.all(
+            color: Colors.black.withOpacity(0.15),
+            width: 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               '意思決定ルーレット',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: scheme.onPrimary,
-                    letterSpacing: 0.5,
-                  ),
+              style: TextStyle(
+                fontSize: 13,
+                letterSpacing: 0.3,
+                color: Colors.brown[800],
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
               _roulette.title.isEmpty ? 'タイトル未設定' : _roulette.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: scheme.onPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.4,
+                color: Colors.black87,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
-              subtitle,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onPrimary.withOpacity(0.85),
-                  ),
+              'タップして回す',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.brown[700],
+              ),
             ),
           ],
         ),
@@ -817,7 +852,7 @@ class _SpinPageState extends State<SpinPage> {
     );
   }
 
-  /// 下半分：スロット筐体
+  /// スロット筐体全体
   Widget _buildSlotFrame(ColorScheme scheme) {
     return AspectRatio(
       aspectRatio: 3 / 4,
@@ -828,15 +863,15 @@ class _SpinPageState extends State<SpinPage> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
+              scheme.surface,
               scheme.surfaceVariant.withOpacity(0.9),
-              scheme.surface.withOpacity(0.9),
             ],
           ),
           boxShadow: const [
             BoxShadow(
               color: Color(0x33000000),
-              blurRadius: 24,
-              offset: Offset(0, 16),
+              blurRadius: 20,
+              offset: Offset(0, 14),
             ),
           ],
         ),
@@ -846,33 +881,32 @@ class _SpinPageState extends State<SpinPage> {
             borderRadius: BorderRadius.circular(18),
             child: Stack(
               children: [
-                // 背景
                 Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        scheme.inverseSurface.withOpacity(0.15),
+                        scheme.primary.withOpacity(0.07),
                         scheme.surface.withOpacity(0.05),
                       ],
                     ),
                   ),
                 ),
-                // リール
                 _buildSlotReel(scheme),
-                // 中央ハイライト窓
+                // 中央の窓
                 IgnorePointer(
                   child: Center(
                     child: Container(
-                      height: 48,
+                      height: 52,
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
                         color: scheme.primaryContainer.withOpacity(0.9),
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: scheme.onPrimaryContainer.withOpacity(0.15),
-                          width: 1,
+                          color:
+                              scheme.onPrimaryContainer.withOpacity(0.18),
+                          width: 1.2,
                         ),
                       ),
                     ),
@@ -883,7 +917,7 @@ class _SpinPageState extends State<SpinPage> {
                   child: Column(
                     children: [
                       Container(
-                        height: 56,
+                        height: 60,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
@@ -897,7 +931,7 @@ class _SpinPageState extends State<SpinPage> {
                       ),
                       const Spacer(),
                       Container(
-                        height: 56,
+                        height: 60,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.bottomCenter,
@@ -912,7 +946,6 @@ class _SpinPageState extends State<SpinPage> {
                     ],
                   ),
                 ),
-                // 結果オーバーレイ
                 _buildResultOverlay(scheme),
               ],
             ),
@@ -922,7 +955,7 @@ class _SpinPageState extends State<SpinPage> {
     );
   }
 
-  /// 実際に縦に回るリール部分
+  /// 実際のリール
   Widget _buildSlotReel(ColorScheme scheme) {
     final options = _roulette.options;
     if (options.isEmpty) {
@@ -933,8 +966,8 @@ class _SpinPageState extends State<SpinPage> {
 
     return ListWheelScrollView.useDelegate(
       controller: _controller,
-      itemExtent: 48,
-      // ★ ここでユーザー操作を完全封鎖 → ボタン / タップでのみ回る
+      itemExtent: 52,
+      // ★ ユーザーがドラッグしても回らない（常にボタン / タップのみ）
       physics: const NeverScrollableScrollPhysics(),
       perspective: 0.0015,
       diameterRatio: 2.0,
@@ -957,9 +990,8 @@ class _SpinPageState extends State<SpinPage> {
                 fontSize: isCenter ? 22 : 18,
                 fontWeight:
                     isCenter ? FontWeight.w700 : FontWeight.w400,
-                color: isCenter
-                    ? scheme.onPrimaryContainer
-                    : scheme.onSurfaceVariant,
+                color:
+                    isCenter ? scheme.onPrimaryContainer : scheme.onSurface,
               ),
               child: Text(
                 opt.label,
@@ -973,7 +1005,7 @@ class _SpinPageState extends State<SpinPage> {
     );
   }
 
-  /// 結果ラベルのオーバーレイ
+  /// 結果オーバーレイ
   Widget _buildResultOverlay(ColorScheme scheme) {
     if (_selectedLabel == null) return const SizedBox.shrink();
 
@@ -981,19 +1013,19 @@ class _SpinPageState extends State<SpinPage> {
       ignoring: !_showActions,
       child: Center(
         child: AnimatedScale(
-          scale: _showActions ? 1.0 : 1.05,
-          duration: const Duration(milliseconds: 180),
+          scale: _showActions ? 1.0 : 1.04,
+          duration: const Duration(milliseconds: 170),
           child: Container(
             padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: BoxDecoration(
-              color: scheme.surface.withOpacity(0.95),
-              borderRadius: BorderRadius.circular(16),
+              color: scheme.surface.withOpacity(0.98),
+              borderRadius: BorderRadius.circular(18),
               boxShadow: const [
                 BoxShadow(
                   blurRadius: 24,
-                  offset: Offset(0, 12),
-                  color: Color(0x66000000),
+                  offset: Offset(0, 14),
+                  color: Color(0x55000000),
                 ),
               ],
             ),
@@ -1002,9 +1034,10 @@ class _SpinPageState extends State<SpinPage> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
                 color: scheme.primary,
+                letterSpacing: 0.6,
               ),
             ),
           ),
@@ -1015,7 +1048,7 @@ class _SpinPageState extends State<SpinPage> {
 
   Widget _buildSpinButton() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
       child: SizedBox(
         width: double.infinity,
         child: FilledButton(
@@ -1028,7 +1061,7 @@ class _SpinPageState extends State<SpinPage> {
 
   Widget _buildResultActions(ColorScheme scheme) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1162,8 +1195,9 @@ class _CleanupPageState extends State<CleanupPage> {
                   final selected = _selectedIds.contains(r.id);
                   return Material(
                     color: selected
-                        ? scheme.primaryContainer.withOpacity(0.6)
-                        : scheme.surfaceVariant.withOpacity(0.4),
+                        ? scheme.primaryContainer.withOpacity(0.8)
+                        : scheme.surface,
+                    elevation: selected ? 2 : 1,
                     borderRadius: BorderRadius.circular(12),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
