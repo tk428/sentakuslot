@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,7 +14,7 @@ class DecisionRouletteApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const seed = Color(0xFFFFB300); // 明るいイエロー系
+    const seed = Color(0xFF27C6D1); // 背景と合うティール系
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -23,9 +24,9 @@ class DecisionRouletteApp extends StatelessWidget {
           seedColor: seed,
           brightness: Brightness.light,
         ),
-        scaffoldBackgroundColor: const Color(0xFFF4F6FB),
+        scaffoldBackgroundColor: const Color(0xFFF7F7FB),
         useMaterial3: true,
-        fontFamily: 'SF Pro Display', // なければシステムフォントにフォールバック
+        fontFamily: 'SF Pro Display',
         textTheme: const TextTheme(
           titleLarge: TextStyle(
             fontSize: 22,
@@ -89,7 +90,7 @@ class Roulette {
   }
 }
 
-/// ===== ホーム画面：ルーレット一覧 =====
+/// ===== ホーム画面 =====
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -106,6 +107,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    // サンプル
     _roulettes.addAll([
       Roulette(
         id: _genId(),
@@ -489,7 +491,7 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
         builder: (_) => SpinPage(
           roulette: _editing.clone(),
           onSaveRequested: (_) async {
-            // プレビューからホームへの保存はここでは何もしない
+            // プレビューからホーム保存はここでは何もしない
           },
         ),
       ),
@@ -692,11 +694,10 @@ class _SpinPageState extends State<SpinPage> {
     final random = Random();
     final targetIndexInOptions = weights[random.nextInt(weights.length)];
 
-    // いまの位置から必ず「何周か」してから止まるようにする
     final currentRaw =
         _controller.hasClients ? _controller.selectedItem : 0;
     final currentMod = currentRaw % options.length;
-    const int loopCount = 8; // 8周回ってから止まる
+    const int loopCount = 8; // 8周以上回す
     final stepsToTarget = (targetIndexInOptions - currentMod + options.length) %
         options.length;
     final targetItem =
@@ -715,7 +716,7 @@ class _SpinPageState extends State<SpinPage> {
       _currentIndex = targetIndexInOptions;
     });
 
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
     setState(() {
       _showActions = true;
@@ -758,155 +759,158 @@ class _SpinPageState extends State<SpinPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              flex: 5,
-              child: Column(
-                children: [
-                  const SizedBox(height: 12),
-                  _buildTitleBubble(scheme),
-                  const SizedBox(height: 18),
-                  Expanded(
-                    child: Center(
-                      child: GestureDetector(
-                        onTap: _spin, // 吹き出しの下の筐体タップでも回る
-                        child: _buildSlotFrame(scheme),
+      body: Container(
+        // 🎨 カラフル背景を全面に敷く
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage(
+                'assets/7898C408-6A13-4004-80C3-E1BCC6F6D99D.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                flex: 5,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 8),
+                    _buildTitleBubble(),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: Center(
+                        child: GestureDetector(
+                          // ✅ 結果表示後はタップしても何も起きない
+                          onTap: (!_isSpinning && !_showActions)
+                              ? _spin
+                              : null,
+                          child: _buildSlotFrame(scheme),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            if (_showActions) _buildResultActions(scheme) else _buildSpinButton(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 上半分：でかい吹き出しタイトル
-  Widget _buildTitleBubble(ColorScheme scheme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFFFF59D), // 明るいイエロー
-              Color(0xFFFFE082), // すこしオレンジ寄り
+              if (_showActions)
+                _buildResultActions(scheme)
+              else
+                _buildSpinButton(),
             ],
           ),
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x33212121),
-              blurRadius: 18,
-              offset: Offset(0, 10),
-            ),
-          ],
-          border: Border.all(
-            color: Colors.black.withOpacity(0.15),
-            width: 1,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '意思決定ルーレット',
-              style: TextStyle(
-                fontSize: 13,
-                letterSpacing: 0.3,
-                color: Colors.brown[800],
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _roulette.title.isEmpty ? 'タイトル未設定' : _roulette.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.4,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'タップして回す',
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.brown[700],
-              ),
-            ),
-          ],
         ),
       ),
     );
   }
 
-  /// スロット筐体全体
+  /// 上半分：SVG吹き出し＋テキスト
+  Widget _buildTitleBubble() {
+    final width = MediaQuery.of(context).size.width;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+      child: Stack(
+        alignment: Alignment.centerLeft,
+        children: [
+          SvgPicture.asset(
+            'assets/bubble_speech.svg',
+            width: width * 0.9,
+          ),
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 40, vertical: 26),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '意思決定ルーレット',
+                  style: TextStyle(
+                    fontSize: 13,
+                    letterSpacing: 0.3,
+                    color: Colors.brown[800],
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _roulette.title.isEmpty ? 'タイトル未設定' : _roulette.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'タップして回す',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.brown[700],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// スロット筐体（枠太めで吹き出しと世界観合わせ）
   Widget _buildSlotFrame(ColorScheme scheme) {
+    const borderColor = Color(0xFFA86A1A);
+    const innerBgTop = Color(0xFFFFF4DE);
+    const innerBgBottom = Color(0xFFFAD6A5);
+
     return AspectRatio(
       aspectRatio: 3 / 4,
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              scheme.surface,
-              scheme.surfaceVariant.withOpacity(0.9),
-            ],
+          color: const Color(0xFFFFF7EA),
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(
+            color: borderColor,
+            width: 4,
           ),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 20,
-              offset: Offset(0, 14),
+              color: Color(0x55212121),
+              blurRadius: 18,
+              offset: Offset(0, 10),
             ),
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
+          padding: const EdgeInsets.fromLTRB(18, 20, 18, 22),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(24),
             child: Stack(
               children: [
                 Container(
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [
-                        scheme.primary.withOpacity(0.07),
-                        scheme.surface.withOpacity(0.05),
-                      ],
+                      colors: [innerBgTop, innerBgBottom],
                     ),
                   ),
                 ),
                 _buildSlotReel(scheme),
-                // 中央の窓
+                // 中央の「帯」
                 IgnorePointer(
                   child: Center(
                     child: Container(
-                      height: 52,
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      height: 54,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: BoxDecoration(
-                        color: scheme.primaryContainer.withOpacity(0.9),
-                        borderRadius: BorderRadius.circular(16),
+                        color: const Color(0xFFFFD489),
+                        borderRadius: BorderRadius.circular(999),
                         border: Border.all(
-                          color:
-                              scheme.onPrimaryContainer.withOpacity(0.18),
-                          width: 1.2,
+                          color: borderColor.withOpacity(0.7),
+                          width: 2,
                         ),
                       ),
                     ),
@@ -923,8 +927,8 @@ class _SpinPageState extends State<SpinPage> {
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              scheme.surface.withOpacity(0.95),
-                              scheme.surface.withOpacity(0.0),
+                              innerBgTop.withOpacity(0.95),
+                              innerBgTop.withOpacity(0.0),
                             ],
                           ),
                         ),
@@ -937,8 +941,8 @@ class _SpinPageState extends State<SpinPage> {
                             begin: Alignment.bottomCenter,
                             end: Alignment.topCenter,
                             colors: [
-                              scheme.surface.withOpacity(0.95),
-                              scheme.surface.withOpacity(0.0),
+                              innerBgBottom.withOpacity(0.95),
+                              innerBgBottom.withOpacity(0.0),
                             ],
                           ),
                         ),
@@ -967,7 +971,6 @@ class _SpinPageState extends State<SpinPage> {
     return ListWheelScrollView.useDelegate(
       controller: _controller,
       itemExtent: 52,
-      // ★ ユーザーがドラッグしても回らない（常にボタン / タップのみ）
       physics: const NeverScrollableScrollPhysics(),
       perspective: 0.0015,
       diameterRatio: 2.0,
@@ -990,8 +993,9 @@ class _SpinPageState extends State<SpinPage> {
                 fontSize: isCenter ? 22 : 18,
                 fontWeight:
                     isCenter ? FontWeight.w700 : FontWeight.w400,
-                color:
-                    isCenter ? scheme.onPrimaryContainer : scheme.onSurface,
+                color: isCenter
+                    ? const Color(0xFF5B3B0F)
+                    : const Color(0xFFB58C57),
               ),
               child: Text(
                 opt.label,
@@ -1005,39 +1009,48 @@ class _SpinPageState extends State<SpinPage> {
     );
   }
 
-  /// 結果オーバーレイ
+  /// 結果ポップ（少しズームして強調）
   Widget _buildResultOverlay(ColorScheme scheme) {
     if (_selectedLabel == null) return const SizedBox.shrink();
 
     return IgnorePointer(
-      ignoring: !_showActions,
+      ignoring: true, // ここは触っても何も起きない
       child: Center(
         child: AnimatedScale(
-          scale: _showActions ? 1.0 : 1.04,
-          duration: const Duration(milliseconds: 170),
-          child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: BoxDecoration(
-              color: scheme.surface.withOpacity(0.98),
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: const [
-                BoxShadow(
-                  blurRadius: 24,
-                  offset: Offset(0, 14),
-                  color: Color(0x55000000),
+          scale: _showActions ? 1.05 : 0.6,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutBack,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: _showActions ? 1 : 0,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 26, vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFDF8),
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: const [
+                  BoxShadow(
+                    blurRadius: 24,
+                    offset: Offset(0, 14),
+                    color: Color(0x66000000),
+                  ),
+                ],
+                border: Border.all(
+                  color: const Color(0xFFA86A1A),
+                  width: 2,
                 ),
-              ],
-            ),
-            child: Text(
-              _selectedLabel!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: scheme.primary,
-                letterSpacing: 0.6,
+              ),
+              child: Text(
+                _selectedLabel!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.6,
+                  color: Color(0xFF5B3B0F),
+                ),
               ),
             ),
           ),
@@ -1069,7 +1082,7 @@ class _SpinPageState extends State<SpinPage> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _spin,
+                  onPressed: _spin, // ここだけでもう一度回す
                   child: const Text('もう一度回す'),
                 ),
               ),
