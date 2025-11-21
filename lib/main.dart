@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -377,6 +376,10 @@ class _HomePageState extends State<HomePage> {
               child: SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: const StadiumBorder(),
+                  ),
                   icon: const Icon(Icons.add),
                   onPressed: () {
                     _openEditor(
@@ -542,6 +545,11 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16.0, vertical: 8),
                       child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 14),
+                          shape: const StadiumBorder(),
+                        ),
                         icon: const Icon(Icons.add),
                         onPressed: _addOption,
                         label: const Text('項目を追加'),
@@ -583,12 +591,14 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
                               children: [
                                 IconButton(
                                   onPressed: () => _changeWeight(opt, -1),
-                                  icon: const Icon(Icons.remove_circle_outline),
+                                  icon: const Icon(Icons.remove_circle),
+                                  color: Colors.orange[700],
                                 ),
                                 Text(opt.weight.toString()),
                                 IconButton(
                                   onPressed: () => _changeWeight(opt, 1),
-                                  icon: const Icon(Icons.add_circle_outline),
+                                  icon: const Icon(Icons.add_circle),
+                                  color: Colors.orange[700],
                                 ),
                               ],
                             ),
@@ -612,6 +622,11 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 14),
+                        shape: const StadiumBorder(),
+                      ),
                       onPressed: _openSpinPreview,
                       child: const Text('回す'),
                     ),
@@ -619,6 +634,11 @@ class _EditRoulettePageState extends State<EditRoulettePage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 14),
+                        shape: const StadiumBorder(),
+                      ),
                       onPressed: _saveAndClose,
                       child: const Text('保存'),
                     ),
@@ -803,22 +823,35 @@ class _SpinPageState extends State<SpinPage> {
     );
   }
 
-  /// 上半分：SVG吹き出し＋テキスト
+  /// フラット黄色吹き出し（コードで描画）
   Widget _buildTitleBubble() {
-    final width = MediaQuery.of(context).size.width;
+    const borderColor = Color(0xFFA86A1A);
+    const bubbleColor = Color(0xFFFFF176);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
       child: Stack(
-        alignment: Alignment.centerLeft,
+        clipBehavior: Clip.none,
         children: [
-          SvgPicture.asset(
-            'assets/bubble_speech.svg',
-            width: width * 0.9,
-          ),
-          Padding(
+          Container(
+            width: double.infinity,
             padding:
-                const EdgeInsets.symmetric(horizontal: 40, vertical: 26),
+                const EdgeInsets.fromLTRB(24, 18, 24, 22),
+            decoration: BoxDecoration(
+              color: bubbleColor,
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(
+                color: borderColor,
+                width: 3,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x55212121),
+                  blurRadius: 16,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -854,104 +887,145 @@ class _SpinPageState extends State<SpinPage> {
               ],
             ),
           ),
+          // しっぽ
+          const Positioned(
+            bottom: -14,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: _BubbleTail(),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  /// スロット筐体（枠太めで吹き出しと世界観合わせ）
+  /// しっぽだけ別ウィジェット
+  static const _borderColor = Color(0xFFA86A1A);
+  static const _bubbleColor = Color(0xFFFFF176);
+
+  class _BubbleTail extends StatelessWidget {
+    const _BubbleTail();
+
+    @override
+    Widget build(BuildContext context) {
+      return Transform.rotate(
+        angle: pi / 4,
+        child: Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            color: _bubbleColor,
+            border: Border.all(
+              color: _borderColor,
+              width: 3,
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  /// スロット筐体（吹き出しと同じくらいの横幅）
   Widget _buildSlotFrame(ColorScheme scheme) {
     const borderColor = Color(0xFFA86A1A);
-    const innerBgTop = Color(0xFFFFF4DE);
-    const innerBgBottom = Color(0xFFFAD6A5);
+    const innerBgTop = Color(0xFFFFF9E5);
+    const innerBgBottom = Color(0xFFFFE0B2);
 
-    return AspectRatio(
-      aspectRatio: 3 / 4,
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF7EA),
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(
-            color: borderColor,
-            width: 4,
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x55212121),
-              blurRadius: 18,
-              offset: Offset(0, 10),
+    final width = MediaQuery.of(context).size.width * 0.9;
+
+    return SizedBox(
+      width: width,
+      child: AspectRatio(
+        aspectRatio: 3 / 4,
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF7EA),
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(
+              color: borderColor,
+              width: 4,
             ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 20, 18, 22),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: Stack(
-              children: [
-                Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [innerBgTop, innerBgBottom],
-                    ),
-                  ),
-                ),
-                _buildSlotReel(scheme),
-                // 中央の「帯」
-                IgnorePointer(
-                  child: Center(
-                    child: Container(
-                      height: 54,
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFD489),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: borderColor.withOpacity(0.7),
-                          width: 2,
-                        ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x55212121),
+                blurRadius: 18,
+                offset: Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 20, 18, 22),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Stack(
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [innerBgTop, innerBgBottom],
                       ),
                     ),
                   ),
-                ),
-                // 上下フェード
-                IgnorePointer(
-                  child: Column(
-                    children: [
-                      Container(
-                        height: 60,
+                  _buildSlotReel(scheme),
+                  // 中央の帯
+                  IgnorePointer(
+                    child: Center(
+                      child: Container(
+                        height: 54,
+                        margin:
+                            const EdgeInsets.symmetric(horizontal: 8),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              innerBgTop.withOpacity(0.95),
-                              innerBgTop.withOpacity(0.0),
-                            ],
+                          color: const Color(0xFFFFD489),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: borderColor.withOpacity(0.7),
+                            width: 2,
                           ),
                         ),
                       ),
-                      const Spacer(),
-                      Container(
-                        height: 60,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: [
-                              innerBgBottom.withOpacity(0.95),
-                              innerBgBottom.withOpacity(0.0),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-                _buildResultOverlay(scheme),
-              ],
+                  // 上下フェード（少し弱めにして見えやすく）
+                  IgnorePointer(
+                    child: Column(
+                      children: [
+                        Container(
+                          height: 50,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                innerBgTop.withOpacity(0.8),
+                                innerBgTop.withOpacity(0.0),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          height: 50,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [
+                                innerBgBottom.withOpacity(0.8),
+                                innerBgBottom.withOpacity(0.0),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildResultOverlay(scheme),
+                ],
+              ),
             ),
           ),
         ),
@@ -959,7 +1033,7 @@ class _SpinPageState extends State<SpinPage> {
     );
   }
 
-  /// 実際のリール
+  /// 実際のリール（文字色を濃くして、回転中も見えやすく）
   Widget _buildSlotReel(ColorScheme scheme) {
     final options = _roulette.options;
     if (options.isEmpty) {
@@ -974,7 +1048,7 @@ class _SpinPageState extends State<SpinPage> {
       physics: const NeverScrollableScrollPhysics(),
       perspective: 0.0015,
       diameterRatio: 2.0,
-      overAndUnderCenterOpacity: 0.25,
+      overAndUnderCenterOpacity: 0.6, // 少しだけ薄く
       onSelectedItemChanged: (index) {
         setState(() {
           _currentIndex = index % options.length;
@@ -988,14 +1062,14 @@ class _SpinPageState extends State<SpinPage> {
 
           return Center(
             child: AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 140),
+              duration: const Duration(milliseconds: 120),
               style: TextStyle(
                 fontSize: isCenter ? 22 : 18,
                 fontWeight:
                     isCenter ? FontWeight.w700 : FontWeight.w400,
                 color: isCenter
                     ? const Color(0xFF5B3B0F)
-                    : const Color(0xFFB58C57),
+                    : const Color(0xCC5B3B0F), // 常に濃いブラウン
               ),
               child: Text(
                 opt.label,
@@ -1009,12 +1083,12 @@ class _SpinPageState extends State<SpinPage> {
     );
   }
 
-  /// 結果ポップ（少しズームして強調）
+  /// 結果ポップ（軽いズーム）
   Widget _buildResultOverlay(ColorScheme scheme) {
     if (_selectedLabel == null) return const SizedBox.shrink();
 
     return IgnorePointer(
-      ignoring: true, // ここは触っても何も起きない
+      ignoring: true,
       child: Center(
         child: AnimatedScale(
           scale: _showActions ? 1.05 : 0.6,
@@ -1065,6 +1139,11 @@ class _SpinPageState extends State<SpinPage> {
       child: SizedBox(
         width: double.infinity,
         child: FilledButton(
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: const StadiumBorder(),
+            backgroundColor: const Color(0xFF00897B),
+          ),
           onPressed: _spin,
           child: Text(_isSpinning ? '回転中…' : '回す'),
         ),
@@ -1082,13 +1161,28 @@ class _SpinPageState extends State<SpinPage> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _spin, // ここだけでもう一度回す
+                  style: OutlinedButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 14),
+                    shape: const StadiumBorder(),
+                    side: BorderSide(
+                      color: const Color(0xFF00897B),
+                      width: 2,
+                    ),
+                  ),
+                  onPressed: _spin,
                   child: const Text('もう一度回す'),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 14),
+                    shape: const StadiumBorder(),
+                    backgroundColor: const Color(0xFF00897B),
+                  ),
                   onPressed: _handleSave,
                   child: const Text('保存'),
                 ),
@@ -1100,6 +1194,11 @@ class _SpinPageState extends State<SpinPage> {
             children: [
               Expanded(
                 child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 12),
+                    shape: const StadiumBorder(),
+                  ),
                   onPressed: _openEditor,
                   child: const Text('編集'),
                 ),
@@ -1107,6 +1206,11 @@ class _SpinPageState extends State<SpinPage> {
               const SizedBox(width: 8),
               Expanded(
                 child: TextButton(
+                  style: TextButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 12),
+                    shape: const StadiumBorder(),
+                  ),
                   onPressed: _goBackToTitle,
                   child: const Text('タイトルに戻る'),
                 ),
@@ -1258,6 +1362,11 @@ class _CleanupPageState extends State<CleanupPage> {
               child: SizedBox(
                 width: double.infinity,
                 child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 14),
+                    shape: const StadiumBorder(),
+                  ),
                   onPressed: _handleDelete,
                   child: const Text('削除して終了'),
                 ),
