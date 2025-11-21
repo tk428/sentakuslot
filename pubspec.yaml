@@ -27,11 +27,16 @@ dev_dependencies:
   flutter_launcher_icons: ^0.13.1
   flutter_native_splash: ^2.3.10
 
+dependencies:
+  flutter_svg: ^2.0.7
+
 flutter:
   uses-material-design: true
   assets:
     - assets/icon.PNG
     - assets/splash.PNG
+    - assets/7898C408-6A13-4004-80C3-E1BCC6F6D99D.png
+    - assets/bubble_speech.svg
 
 flutter_launcher_icons:
   android: true
